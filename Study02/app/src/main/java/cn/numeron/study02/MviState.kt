@@ -1,4 +1,6 @@
-package cn.numeron.study01
+package cn.numeron.study02
+
+import java.lang.reflect.Field
 
 sealed class MviState<T>(
 
@@ -6,26 +8,26 @@ sealed class MviState<T>(
     open val value: T?,
 
     /** 事件 */
-    override var event: Event? = null
+    override val event: Event? = null
 
 ) : EventOwner {
 
-    fun withSuccess(value: T, event: Event? = null): MviState<T> {
+    fun toSuccess(value: T, event: Event? = null): MviState<T> {
         return Success(value = value, event = event)
     }
 
-    fun withLoading(progress: Float, event: Event? = null): MviState<T> {
+    fun toLoading(progress: Float = 0f, event: Event? = null): MviState<T> {
         return Loading(progress = progress, value = value, event = event)
     }
 
-    fun withFailure(
+    fun toFailure(
         error: Throwable,
         event: Event = MessageEvent(MviArchitecture.errorTextExtractor.extract(error))
     ): MviState<T> {
         return Failure(error = error, value = value, event = event)
     }
 
-    fun withEmpty(event: Event? = null): MviState<T> {
+    fun toEmpty(event: Event? = null): MviState<T> {
         return Empty(value = value, event = event)
     }
 
@@ -38,15 +40,23 @@ sealed class MviState<T>(
         }
     }
 
+    final override fun dismantle() {
+        eventField.set(this, null)
+    }
+
     companion object {
 
-        inline operator fun <reified T> invoke(): MviState<T> {
-            return Empty()
+        private val eventField: Field
+
+        init {
+            val mviStateClass = MviState::class.java
+            eventField = mviStateClass.getDeclaredField("event")
+            eventField.isAccessible = true
         }
 
-        inline operator fun <reified T> invoke(value: T): MviState<T> {
-            return Success(value)
-        }
+        inline operator fun <reified T> invoke(): MviState<T> = Empty()
+
+        inline operator fun <reified T> invoke(value: T): MviState<T> = Success(value)
 
     }
 
@@ -57,7 +67,7 @@ data class Success<T>(
     /** 成功时的数据，一定是非空的 */
     override val value: T,
 
-    override var event: Event? = null
+    override val event: Event? = null
 
 ) : MviState<T>(value, event)
 
@@ -66,12 +76,12 @@ data class Failure<T>(
     /** 失败时的异常信息 */
     val error: Throwable,
 
+    override val event: Event,
+
     /** 失败之前成功的数据 */
-    override val value: T? = null,
+    override val value: T? = null
 
-    override var event: Event? = null
-
-) : MviState<T>(value, event)
+) : MviState<T>(value, null)
 
 data class Loading<T>(
 
@@ -81,7 +91,7 @@ data class Loading<T>(
     /** 加载之前成功的数据 */
     override val value: T? = null,
 
-    override var event: Event? = null
+    override val event: Event? = null
 
 ) : MviState<T>(value, event)
 
@@ -90,7 +100,7 @@ data class Empty<T>(
     /** 空数据之前成功的数据 */
     override val value: T? = null,
 
-    override var event: Event? = null
+    override val event: Event? = null
 
 ) : MviState<T>(value, event)
 

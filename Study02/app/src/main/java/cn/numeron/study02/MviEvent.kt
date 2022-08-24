@@ -1,4 +1,6 @@
-package cn.numeron.study01
+package cn.numeron.study02
+
+import android.widget.Toast
 
 enum class Duration {
 
@@ -6,7 +8,15 @@ enum class Duration {
 
     Long,
 
-    Indefinite
+    Indefinite;
+
+    val toast: Int
+        get() = when (this) {
+            Short -> Toast.LENGTH_SHORT
+            Long -> Toast.LENGTH_LONG
+            Indefinite -> TODO()
+        }
+
 }
 
 /** 事件的基类，实现类有[ToastEvent]、[SnackbarEvent]以及[MessageEvent] */
@@ -58,10 +68,8 @@ data class MessageEvent(
 
 interface EventOwner {
 
-    var event: Event?
+    val event: Event?
 
-    fun dismantle() {
-        event = null
-    }
+    fun dismantle()
 
 }
