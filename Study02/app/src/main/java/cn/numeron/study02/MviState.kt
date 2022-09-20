@@ -1,6 +1,8 @@
 package cn.numeron.study02
 
 import java.lang.reflect.Field
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 sealed class MviState<T>(
 
@@ -11,6 +13,9 @@ sealed class MviState<T>(
     override val event: Event? = null
 
 ) : EventOwner {
+
+    val hasValue: Boolean
+        get() = value != null && hasValue(value)
 
     fun toSuccess(value: T, event: Event? = null): MviState<T> {
         return Success(value = value, event = event)
@@ -52,6 +57,12 @@ sealed class MviState<T>(
             val mviStateClass = MviState::class.java
             eventField = mviStateClass.getDeclaredField("event")
             eventField.isAccessible = true
+        }
+
+        private fun hasValue(value: Any?): Boolean {
+            if (value is Iterable<*>) return value.any()
+            if (value is Iterator<*>) return value.hasNext()
+            return false
         }
 
         inline operator fun <reified T> invoke(): MviState<T> = Empty()
